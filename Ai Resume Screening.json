@@ -1,0 +1,805 @@
+{
+  "name": "Ai Resume Screening",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        64
+      ],
+      "id": "2447cfed-9371-4aab-8bed-a4499a5c52cb",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "returnAll": true,
+        "filter": {
+          "driveId": {
+            "__rl": true,
+            "value": "My Drive",
+            "mode": "list",
+            "cachedResultName": "My Drive",
+            "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+          },
+          "folderId": {
+            "__rl": true,
+            "value": "1M59jLafFspjZAEd0XdSEV36GVsoq9dLn",
+            "mode": "list",
+            "cachedResultName": "N8N trial",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1M59jLafFspjZAEd0XdSEV36GVsoq9dLn"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {
+          "fields": "={{ [\"name\",\"id\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -48,
+        80
+      ],
+      "id": "59155106-d193-42cd-b9ce-9ac052f95af3",
+      "name": "Search files and folders",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "13pDAXpEeV1QVV4W",
+          "name": "Google Drive account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        224,
+        64
+      ],
+      "id": "24b0f915-15f1-44c1-8e5d-12f3d10b374a",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        432,
+        -208
+      ],
+      "id": "bc6f3774-7cb9-4aed-a5ff-c02a10549b9e",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "13pDAXpEeV1QVV4W",
+          "name": "Google Drive account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        464,
+        64
+      ],
+      "id": "840dfa3e-7d9b-4ca3-885b-1d6fa107a135",
+      "name": "Search files and folders1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "13pDAXpEeV1QVV4W",
+          "name": "Google Drive account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "Upload File to PDF.co",
+        "binaryData": true,
+        "name": "={{$binary.data.fileName}}"
+      },
+      "type": "n8n-nodes-pdfco.PDFco Api",
+      "typeVersion": 1,
+      "position": [
+        688,
+        -208
+      ],
+      "id": "0dc0a98e-bef3-4d8f-ab70-2825697d6baf",
+      "name": "PDFco Api",
+      "credentials": {
+        "pdfcoApi": {
+          "id": "VTXSCdWdJn1Qu4tN",
+          "name": "PDF.co account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "Convert from PDF",
+        "url": "={{ $json.url }}",
+        "advancedOptions": {}
+      },
+      "type": "n8n-nodes-pdfco.PDFco Api",
+      "typeVersion": 1,
+      "position": [
+        928,
+        -208
+      ],
+      "id": "c43a2b31-d151-4d42-b535-b951372e6076",
+      "name": "PDFco Api1",
+      "credentials": {
+        "pdfcoApi": {
+          "id": "VTXSCdWdJn1Qu4tN",
+          "name": "PDF.co account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Resume text:\n{{ $json[\"body\"] }}\n",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are an AI assistant helping HR extract structured data from resumes.\n\nYour task:\n- Return ONLY a single valid JSON object.\n- The JSON must follow the schema shown below exactly.\n- Do not wrap the result inside another key like \"output\".\n- Do not include text, explanations, or formatting outside the JSON.\n- If a field is missing in the resume, return an empty array [] or null for that field.\n- ⚠️ Never nest the response inside \"output\" or any wrapper. The top-level object must contain the keys directly.\n\nHere is the schema you MUST follow:\n\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"full_name\": { \"type\": \"string\" },\n    \"email_address\": { \"type\": \"string\" },\n    \"phone_number\": { \"type\": \"string\" },\n    \"social_profiles\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"location\": { \"type\": \"string\" },\n    \"nationality\": { \"type\": [\"string\", \"null\"] },\n    \"domain\": { \"type\": \"string\" },\n    \"education\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"degree\": { \"type\": \"string\" },\n          \"institution\": { \"type\": \"string\" },\n          \"years\": { \"type\": \"string\" }\n        },\n        \"required\": [\"degree\", \"institution\", \"years\"]\n      }\n    },\n    \"years_of_experience\": { \"type\": \"number\" },\n    \"current_company\": { \"type\": \"string\" },\n    \"past_companies\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"job_titles\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"skills\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"languages_known\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"career_summary\": { \"type\": \"string\" }\n  },\n  \"required\": [\"full_name\", \"email_address\", \"phone_number\"]\n}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1264,
+        -208
+      ],
+      "id": "2ddc3d8d-cb6b-4d2e-89c7-28b81c843947",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1OQok5UfqEev3ZnE7S1p94G7-QUJaKf52-a8ASnW0PQk",
+          "mode": "list",
+          "cachedResultName": "B well Candidates",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OQok5UfqEev3ZnE7S1p94G7-QUJaKf52-a8ASnW0PQk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OQok5UfqEev3ZnE7S1p94G7-QUJaKf52-a8ASnW0PQk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "full_name": "={{ $json.full_name }}",
+            "email_address": "={{ $json.email_address }}",
+            "phone_number": "={{ $json.phone_number }}",
+            "social_profiles": "={{ $json.social_profiles }}",
+            "location": "={{ $json.location }}",
+            "nationality": "={{ $json.nationality }}",
+            "domain": "={{ $json.domain }}",
+            "education": "={{ $json.education }}",
+            "years_of_experience": "={{ $json.years_of_experience }}",
+            "current_company": "={{ $json.current_company }}",
+            "past_companies": "={{ $json.past_companies }}",
+            "job_titles": "={{ $json.job_titles }}",
+            "skills": "={{ $json.skills }}",
+            "languages_known": "={{ $json.languages_known }}",
+            "career_summary": "={{ $json.career_summary }}",
+            "applied_for": "={{ $('Loop Over Items').item.json.folder_name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_address",
+              "displayName": "email_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone_number",
+              "displayName": "phone_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "social_profiles",
+              "displayName": "social_profiles",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nationality",
+              "displayName": "nationality",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "education",
+              "displayName": "education",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "years_of_experience",
+              "displayName": "years_of_experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "current_company",
+              "displayName": "current_company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "past_companies",
+              "displayName": "past_companies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "job_titles",
+              "displayName": "job_titles",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "skills",
+              "displayName": "skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "languages_known",
+              "displayName": "languages_known",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "career_summary",
+              "displayName": "career_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "applied_for",
+              "displayName": "applied_for",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1856,
+        -208
+      ],
+      "id": "e11340ff-2867-46ec-9708-b8c0f370d7a1",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rbiZCpJs7VpdbANT",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxOutputTokens": 4096,
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        96
+      ],
+      "id": "b11c85e1-f129-4c61-a08a-c0d4463b82ea",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Cto5VWc2w3UoMgGi",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function stripCodeFences(s) {\n  if (typeof s !== 'string') return '';\n  return s.replace(/^\\s*```(?:json)?\\s*/i, '').replace(/\\s*```\\s*$/, '').trim();\n}\n\nconst out = [];\nconst folderName = $('Loop Over Items').first().json.folder_name || \"\";\n\nfor (const item of items) {\n  let data = item.json;\n\n  if (typeof item.json.text === 'string') {\n    const raw = stripCodeFences(item.json.text);\n    try {\n      data = JSON.parse(raw);\n    } catch (e) {\n      // Skip bad items instead of failing the whole batch\n      continue;\n    }\n  }\n\n  const row = {\n    folder_name: folderName, // 👈 include folder name\n    full_name: data.full_name || \"\",\n    email_address: data.email_address || \"\",\n    phone_number: data.phone_number || \"\",\n    social_profiles: (data.social_profiles || []).join(\", \"),\n    location: data.location || \"\",\n    nationality: data.nationality ?? \"\",\n    domain: data.domain || \"\",\n    education: (data.education || []).map(e => `${e.degree} - ${e.institution} (${e.years})`).join(\" | \"),\n    years_of_experience: data.years_of_experience ?? \"\",\n    current_company: data.current_company || \"\",\n    past_companies: (data.past_companies || []).join(\", \"),\n    job_titles: (data.job_titles || []).join(\", \"),\n    skills: (data.skills || []).join(\", \"),\n    languages_known: (data.languages_known || []).join(\", \"),\n    career_summary: data.career_summary ?? \"\"\n  };\n\n  out.push({ json: row });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        -208
+      ],
+      "id": "22205a8a-c8a6-44ff-9948-5652e3f329ba",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "content": "##  Initiating the Flow ",
+        "height": 240
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -464,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "dd943300-3429-4a6b-87ca-f10b29fbfc90",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Accessing the main folder of CVs",
+        "height": 240,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -96,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "727bb01f-01b6-4f9f-a820-a2e19c60dcea",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Looping over each subfolder ",
+        "height": 176,
+        "width": 208,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        176,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "cb66b16f-e652-4855-82c3-37a05c6c64e4",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Extract all resume from each subfolder ",
+        "height": 176,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        416,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "d51c6d13-18f0-4621-9d54-c8acde76f36f",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Folder Structure\n/Main Folder/\n├── Human Resources \n│   └── CV1.pdf\n│   └── CV2.pdf\n├── Developer \n│   └── CV3.pdf\n│   └── CV4.pdf\n\n",
+        "height": 192,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -304
+      ],
+      "id": "5a2e2387-8a5d-4127-a18f-93d8fbabb348",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3f3cf750-a9c4-4f50-9d8f-0684588d1202",
+              "name": "id",
+              "value": "={{ $('Search files and folders1').item.json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        848,
+        112
+      ],
+      "id": "85e70208-f700-4710-b2a6-a4f8e715e418",
+      "name": "Set Node"
+    },
+    {
+      "parameters": {
+        "content": "Setting the id of each resume to be used in the next node",
+        "height": 176,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        784,
+        32
+      ],
+      "typeVersion": 1,
+      "id": "c0919c28-d98b-41b8-9450-c0489b3da970",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Downloading the CVs",
+        "height": 80,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        -304
+      ],
+      "id": "96845925-b3d4-4846-bbb8-5afebd2a8fe4",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Uploading the CVs to the free pdf extractor (PDFco)",
+        "height": 80,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -304
+      ],
+      "id": "27608abc-9028-4252-8610-a005c13e65be",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "Converting pdf to text",
+        "height": 80,
+        "width": 224,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        880,
+        -304
+      ],
+      "id": "4412aed6-ee76-4986-9e04-6e7c45be8862",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "Input the text to the LLM with proper system prompt while specifying the output scheme",
+        "height": 80,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -320
+      ],
+      "id": "a153e91d-46c3-4dcf-b7c6-4474bfc1dde9",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "Extracting the text from the scheme of the LLM into an object format ",
+        "height": 80
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        -320
+      ],
+      "id": "f187c992-8293-471e-9809-51be2682143a",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "Appending the extract object to the coresponding columns\n",
+        "height": 80,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        -320
+      ],
+      "id": "bd60a83f-5123-426e-bc22-ab5b243eb7c8",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "Note:\nSpecifying the output format in the system prompt gave better result than using the required option format ",
+        "height": 112,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -448
+      ],
+      "id": "fbbbd894-fe98-4045-aa7b-b2ceb48b6751",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "You must download the PDFco node first if you are using it for the first time",
+        "height": 80,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        736,
+        -416
+      ],
+      "id": "8cdfa42b-ab92-4882-a025-a89768208e0c",
+      "name": "Sticky Note13"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search files and folders1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders1": {
+      "main": [
+        [
+          {
+            "node": "Set Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "PDFco Api",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDFco Api": {
+      "main": [
+        [
+          {
+            "node": "PDFco Api1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDFco Api1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Node": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e7a36ee0-38c5-43af-99f8-7272de5f832d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2de5e8da94484811a8d2e8b48f50a0ca0612077fc1b6934961364a24ff75fcc0"
+  },
+  "id": "G9zXAzbRDHEv1qNj",
+  "tags": []
+}
