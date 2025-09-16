@@ -164,7 +164,7 @@ Below are exact steps to create and attach credentials in n8n for each service. 
 
 * **Node**: *Google Gemini Chat Model* (n8n AI)
 * **Credential**: Google AI Studio API Key
-* **Model**: `={{ $env.GEMINI_MODEL || "gemini-1.5-flash" }}`
+* **Model**: `={{ $env.GEMINI_MODEL || "gemini-2.5-flash" }}`
 * **System Instruction**: *(see prompt below)*
 * **User Message**: pass the plain‐text CV. Example:
 
