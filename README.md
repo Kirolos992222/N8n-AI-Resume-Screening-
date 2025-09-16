@@ -187,8 +187,8 @@ Below are exact steps to create and attach credentials in n8n for each service. 
 * **Value Range / Input Data**: Use the **Code** node output mapping as one row.
 * **Credentials**: Google Sheets credential created in §3.1.
 
-> Ensure the Sheet has matching columns, e.g.:
-> `full_name	email_address	phone_number	social_profiles	location	nationality	domain	education	years_of_experience	current_company	past_companies	job_titles	skills	languages_known	career_summary	applied_for							`
+> Ensure the Sheet has matching columns:
+> `full_name	email_address	phone_number	social_profiles	location	nationality	domain	education	years_of_experience	current_company	past_companies	job_titles	skills	languages_known	career_summary							`
 
 ---
 
